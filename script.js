@@ -1,72 +1,44 @@
-const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-
-let referenceDescriptor = null;
-
-async function setupCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  document.getElementById('video').srcObject = stream;
-}
-
-async function loadModels() {
-  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-}
-
-function captureCanvas() {
+async function startVerification() {
   const video = document.getElementById('video');
   const canvas = document.getElementById('canvas');
-  canvas.style.display = 'block';
-  const context = canvas.getContext('2d');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return canvas;
-}
-
-async function startVerification() {
   const result = document.getElementById('result');
-  result.innerText = '🔄 Capturando referência...';
-  result.style.color = 'black';
 
-  const canvasRef = captureCanvas();
-  const ref = await faceapi
-    .detectSingleFace(canvasRef, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks()
-    .withFaceDescriptor();
+  result.innerText = '🔄 Carregando modelos...';
 
-  if (!ref) {
-    result.innerText = '❌ Nenhum rosto detectado na referência.';
-    return;
-  }
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.load('/verificacao-facial-idplus/models'),
+    faceapi.nets.faceLandmark68Net.load('/verificacao-facial-idplus/models')
+  ]);
 
-  referenceDescriptor = ref.descriptor;
-  result.innerText = '✅ Referência capturada. Aguardando para comparação...';
+  result.innerText = '📷 Capturando vídeo...';
 
-  setTimeout(async () => {
-    const canvasComp = captureCanvas();
-    const comp = await faceapi
-      .detectSingleFace(canvasComp, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks()
-      .withFaceDescriptor();
+  const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+  video.srcObject = stream;
 
-    if (!comp) {
-      result.innerText = '❌ Nenhum rosto detectado na verificação.';
-      return;
-    }
+  video.onloadedmetadata = () => {
+    video.play();
+    detectarFace();
+  };
 
-    const distance = faceapi.euclideanDistance(referenceDescriptor, comp.descriptor);
-    const threshold = 0.6;
-    if (distance < threshold) {
-      result.innerText = '✅ Mesma pessoa (confiança alta).';
-      result.style.color = 'green';
+  async function detectarFace() {
+    const options = new faceapi.TinyFaceDetectorOptions();
+    const detections = await faceapi.detectSingleFace(video, options).withFaceLandmarks();
+
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    faceapi.matchDimensions(canvas, video);
+    const resized = faceapi.resizeResults(detections, video);
+
+    if (detections) {
+      faceapi.draw.drawDetections(canvas, resized);
+      faceapi.draw.drawFaceLandmarks(canvas, resized);
+      result.innerText = '✅ Rosto detectado com sucesso!';
     } else {
-      result.innerText = '❌ Pessoa diferente (confiança baixa).';
-      result.style.color = 'red';
+      result.innerText = '❌ Nenhum rosto detectado. Tente novamente.';
     }
-  }, 3000);
+
+    setTimeout(detectarFace, 1000); // tenta a cada 1 segundo
+  }
 }
 
-loadModels().then(setupCamera);
 
 
