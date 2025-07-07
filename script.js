@@ -1,3 +1,5 @@
+const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+
 let referenceDescriptor = null;
 
 async function setupCamera() {
@@ -6,10 +8,9 @@ async function setupCamera() {
 }
 
 async function loadModels() {
-  const url = './models';
-  await faceapi.nets.tinyFaceDetector.loadFromUri(url);
-  await faceapi.nets.faceLandmark68Net.loadFromUri(url);
-  await faceapi.nets.faceRecognitionNet.loadFromUri(url);
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 }
 
 function captureCanvas() {
@@ -67,4 +68,5 @@ async function startVerification() {
 }
 
 loadModels().then(setupCamera);
+
 
