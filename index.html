@@ -48,7 +48,7 @@
     }
   </style>
 
-  <!-- ⚠️ Carregando os scripts locais -->
+  <!-- Carrega as bibliotecas localmente -->
   <script defer src="./face-api.min.js"></script>
   <script defer src="./script.js"></script>
 </head>
@@ -58,14 +58,18 @@
     <h1>Verificação Facial - IDPlus</h1>
     <p>Pressione o botão abaixo para iniciar a verificação.</p>
 
+    <!-- Câmera -->
     <video id="video" autoplay playsinline></video>
     <br />
     <button onclick="startVerification()">Iniciar Verificação</button>
+
+    <!-- Imagem capturada -->
     <canvas id="canvas" style="display:none;"></canvas>
+
+    <!-- Resultado -->
     <div id="result"></div>
   </div>
 </body>
 </html>
-
 
 
