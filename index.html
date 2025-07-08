@@ -1,64 +1,85 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <title>Verificação Facial - IDPlus</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script defer src="./face-api.min.js"></script>
-  <script defer src="./script.js"></script>
+let referenciaDescriptor = null;
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 30px;
-      background-color: #f9f9f9;
-    }
+async function carregarModelos() {
+  const status = document.getElementById("status");
+  status.textContent = "⏳ Carregando modelos...";
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
+    faceapi.nets.faceLandmark68Net.loadFromUri('./models'),
+    faceapi.nets.faceRecognitionNet.loadFromUri('./models')
+  ]);
+  status.textContent = "✅ Modelos carregados. Aguardando captura.";
+}
 
-    h1 {
-      margin-bottom: 20px;
-    }
+async function iniciarCamera() {
+  const video = document.getElementById("video");
+  const status = document.getElementById("status");
 
-    video, canvas {
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      margin: 10px auto;
-      display: block;
-    }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
 
-    button {
-      margin: 10px;
-      padding: 12px 24px;
-      font-size: 16px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      background-color: #fff;
-      cursor: pointer;
-    }
+    video.onloadedmetadata = () => {
+      video.play().catch(err => {
+        status.textContent = "❌ Erro ao iniciar o vídeo: " + err.message;
+      });
+    };
+  } catch (err) {
+    status.textContent = "❌ Erro ao acessar a câmera: " + err.message;
+  }
+}
 
-    button:hover {
-      background-color: #f0f0f0;
-    }
+async function capturarReferencia() {
+  const canvas = document.getElementById("canvasReferencia");
+  const video = document.getElementById("video");
+  const status = document.getElementById("status");
 
-    .status {
-      margin-top: 15px;
-      font-weight: bold;
-      color: #333;
-    }
-  </style>
-</head>
-<body>
-  <h1>Verificação Facial - IDPlus</h1>
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  canvas.style.display = "block";
 
-  <video id="video" width="360" height="270" autoplay muted playsinline></video>
+  const deteccao = await faceapi
+    .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+    .withFaceLandmarks()
+    .withFaceDescriptor();
 
-  <div>
-    <button onclick="capturarReferencia()">📸 Capturar Referência</button>
-    <button onclick="comparar()">🔍 Verificar Semelhança</button>
-  </div>
+  if (!deteccao) {
+    status.textContent = "❌ Nenhum rosto detectado na referência.";
+    return;
+  }
 
-  <canvas id="canvasReferencia" width="360" height="270" style="display: none;"></canvas>
+  referenciaDescriptor = deteccao.descriptor;
+  status.textContent = "📌 Referência capturada com sucesso.";
+}
 
-  <div id="status" class="status">⚠️ Por favor, capture uma referência primeiro.</div>
-</body>
-</html>
+async function comparar() {
+  const video = document.getElementById("video");
+  const status = document.getElementById("status");
+
+  if (!referenciaDescriptor) {
+    status.textContent = "⚠️ Por favor, capture uma referência primeiro.";
+    return;
+  }
+
+  const deteccao = await faceapi
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+
+  if (!deteccao) {
+    status.textContent = "❌ Nenhum rosto detectado ao vivo.";
+    return;
+  }
+
+  const distancia = faceapi.euclideanDistance(referenciaDescriptor, deteccao.descriptor);
+
+  if (distancia < 0.6) {
+    status.innerHTML = `✅ Rosto compatível! Similaridade: <b>${distancia.toFixed(4)}</b>`;
+  } else {
+    status.innerHTML = `❌ Rosto diferente. Similaridade: <b>${distancia.toFixed(4)}</b>`;
+  }
+}
+
+window.onload = async () => {
+  await carregarModelos();
+  await iniciarCamera();
+};
