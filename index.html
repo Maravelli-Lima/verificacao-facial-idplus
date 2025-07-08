@@ -17,7 +17,7 @@
       max-width: 600px;
       margin: auto;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
     .logo {
       width: 150px;
@@ -41,16 +41,14 @@
     button:hover {
       background: #0056cc;
     }
-    #result {
+    #status {
       font-size: 1.2em;
       font-weight: bold;
       margin-top: 1em;
     }
   </style>
-
-  <!-- Carrega as bibliotecas localmente -->
-  <script defer src="./face-api.min.js"></script>
-  <script defer src="./script.js"></script>
+  <script defer src="face-api.min.js"></script>
+  <script defer src="script.js"></script>
 </head>
 <body>
   <div class="container">
@@ -58,18 +56,11 @@
     <h1>Verificação Facial - IDPlus</h1>
     <p>Pressione o botão abaixo para iniciar a verificação.</p>
 
-    <!-- Câmera -->
-    <video id="video" autoplay playsinline></video>
-    <br />
-    <button onclick="startVerification()">Iniciar Verificação</button>
-
-    <!-- Imagem capturada -->
-    <canvas id="canvas" style="display:none;"></canvas>
-
-    <!-- Resultado -->
-    <div id="result"></div>
+    <video id="video" autoplay playsinline style="display: none;"></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <button id="startButton">Iniciar Verificação</button>
+    <p id="status">📦 Carregando modelos...</p>
   </div>
 </body>
 </html>
-
 
