@@ -20,8 +20,8 @@ async function iniciarCamera() {
     video.srcObject = stream;
 
     video.onloadedmetadata = () => {
-      video.play().catch((err) => {
-        status.textContent = "❌ Erro ao iniciar vídeo: " + err.message;
+      video.play().catch(err => {
+        status.textContent = "❌ Erro ao iniciar o vídeo: " + err.message;
       });
     };
   } catch (err) {
@@ -71,12 +71,11 @@ async function comparar() {
   }
 
   const distancia = faceapi.euclideanDistance(referenciaDescriptor, deteccao.descriptor);
-  console.log("📏 Similaridade:", distancia);
 
   if (distancia < 0.6) {
-    status.innerHTML = `✅ Rosto compatível! Similaridade: <strong>${distancia.toFixed(4)}</strong>`;
+    status.innerHTML = `✅ Rosto compatível! Similaridade: <b>${distancia.toFixed(4)}</b>`;
   } else {
-    status.innerHTML = `❌ Rosto diferente. Similaridade: <strong>${distancia.toFixed(4)}</strong>`;
+    status.innerHTML = `❌ Rosto diferente. Similaridade: <b>${distancia.toFixed(4)}</b>`;
   }
 }
 
