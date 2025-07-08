@@ -17,11 +17,6 @@ async function iniciarCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     video.srcObject = stream;
-    video.onloadedmetadata = () => {
-      video.play().catch(err => {
-        status.textContent = "❌ Erro ao iniciar o vídeo: " + err.message;
-      });
-    };
   } catch (err) {
     status.textContent = "❌ Erro ao acessar a câmera: " + err.message;
   }
@@ -50,8 +45,8 @@ async function capturarReferencia() {
 }
 
 async function comparar() {
-  const video = document.getElementById("video");
   const status = document.getElementById("status");
+  const video = document.getElementById("video");
 
   if (!referenciaDescriptor) {
     status.textContent = "⚠️ Por favor, capture uma referência primeiro.";
@@ -69,7 +64,6 @@ async function comparar() {
   }
 
   const distancia = faceapi.euclideanDistance(referenciaDescriptor, deteccao.descriptor);
-
   if (distancia < 0.6) {
     status.innerHTML = `✅ Rosto compatível! Similaridade: <b>${distancia.toFixed(4)}</b>`;
   } else {
