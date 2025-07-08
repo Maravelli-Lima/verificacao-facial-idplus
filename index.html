@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Verificação Facial - IDPlus</title>
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <script defer src="./face-api.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,7 +22,7 @@
       margin-bottom: 20px;
       cursor: pointer;
     }
-    video, canvas, img {
+    video, img {
       border-radius: 12px;
       margin-bottom: 20px;
       max-width: 100%;
@@ -41,7 +41,6 @@
   <p class="status" id="status"></p>
   <video id="video" width="360" height="270" autoplay muted></video>
   <img id="imagemReferencia" src="foto.png" width="360" height="270" />
-  <canvas id="canvas" style="display:none;"></canvas>
 
   <script>
     async function iniciarVerificacao() {
@@ -50,9 +49,9 @@
 
       try {
         await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-          faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
-          faceapi.nets.faceLandmark68Net.loadFromUri('/models')
+          faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('./models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('./models')
         ]);
       } catch (e) {
         status.innerHTML = "❌ Erro ao carregar modelos: " + e.message;
@@ -119,4 +118,3 @@
   </script>
 </body>
 </html>
-
