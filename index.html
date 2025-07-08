@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <title>Verificação Facial - IDPlus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="./style.css" />
+
+  <!-- CDN do face-api -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <script defer src="./script.js"></script>
 </head>
 <body>
   <h1>Verificação Facial - IDPlus</h1>
@@ -15,9 +20,5 @@
   <br />
   <canvas id="canvasReferencia" width="360" height="270" style="display:none;"></canvas>
   <div id="status">⚠️ Por favor, capture uma referência primeiro.</div>
-
-  <!-- Scripts -->
-  <script defer src="./face-api.min.js"></script>
-  <script defer src="./script.js"></script>
 </body>
 </html>
