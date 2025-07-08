@@ -14,11 +14,14 @@ async function carregarModelos() {
 async function iniciarCamera() {
   const video = document.getElementById("video");
   const status = document.getElementById("status");
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     video.srcObject = stream;
-    video.onloadedmetadata = () => video.play();
+    video.onloadedmetadata = () => {
+      video.play().catch(err => {
+        status.textContent = "❌ Erro ao iniciar o vídeo: " + err.message;
+      });
+    };
   } catch (err) {
     status.textContent = "❌ Erro ao acessar a câmera: " + err.message;
   }
@@ -30,7 +33,7 @@ async function capturarReferencia() {
   const status = document.getElementById("status");
 
   canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-  canvas.style.display = "block";
+  canvas.style.display = 'block';
 
   const deteccao = await faceapi
     .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
