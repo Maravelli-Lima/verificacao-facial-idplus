@@ -1,66 +1,22 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IDPlus - Verificação Facial</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #f4f4f4;
-      text-align: center;
-      padding: 2em;
-    }
-    .container {
-      background: white;
-      padding: 2em;
-      max-width: 600px;
-      margin: auto;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-    .logo {
-      width: 150px;
-      margin-bottom: 1em;
-    }
-    video, canvas {
-      border-radius: 8px;
-      margin: 1em 0;
-      width: 100%;
-      max-width: 400px;
-    }
-    button {
-      background: #006eff;
-      color: white;
-      border: none;
-      padding: 1em 2em;
-      font-size: 1em;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056cc;
-    }
-    #status {
-      font-size: 1.2em;
-      font-weight: bold;
-      margin-top: 1em;
-    }
-  </style>
-  <script defer src="face-api.min.js"></script>
-  <script defer src="script.js"></script>
+  <title>Verificação Facial - IDPlus</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Scripts essenciais -->
+  <script defer src="./face-api.min.js"></script>
+  <script defer src="./script.js"></script>
 </head>
 <body>
   <div class="container">
-    <img src="https://cloud.tencent.com/favicon.ico" alt="IDPlus" class="logo" />
+    <img src="favicon.ico" alt="Logo" width="100" style="margin-bottom: 20px;" />
     <h1>Verificação Facial - IDPlus</h1>
     <p>Pressione o botão abaixo para iniciar a verificação.</p>
-
-    <video id="video" autoplay playsinline style="display: none;"></video>
-    <canvas id="canvas" style="display: none;"></canvas>
     <button id="startButton">Iniciar Verificação</button>
     <p id="status">📦 Carregando modelos...</p>
   </div>
 </body>
 </html>
-
