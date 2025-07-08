@@ -21,10 +21,8 @@
     video, canvas {
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      margin: 10px;
+      margin: 10px auto;
       display: block;
-      margin-left: auto;
-      margin-right: auto;
     }
 
     button {
@@ -51,22 +49,17 @@
 <body>
   <h1>Verificação Facial - IDPlus</h1>
 
-  <!-- Vídeo da câmera -->
   <video id="video" width="360" height="270" autoplay muted playsinline></video>
 
-  <!-- Botões -->
   <div>
     <button onclick="capturarReferencia()">📸 Capturar Referência</button>
     <button onclick="comparar()">🔍 Verificar Semelhança</button>
   </div>
 
-  <!-- Canvas para imagem de referência -->
   <canvas id="canvasReferencia" width="360" height="270" style="display: none;"></canvas>
 
-  <!-- Resultado -->
   <div id="status" class="status">⚠️ Por favor, capture uma referência primeiro.</div>
 
-  <!-- Script principal -->
   <script>
     let referenciaDescriptor = null;
 
@@ -83,13 +76,26 @@
 
     async function iniciarCamera() {
       const video = document.getElementById("video");
+      const status = document.getElementById("status");
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+
+        if (!stream) {
+          status.textContent = "❌ Não foi possível acessar o stream de vídeo.";
+          return;
+        }
+
         video.srcObject = stream;
-        await video.play();
-        console.log("🎥 Câmera iniciada com sucesso.");
+
+        // Aguarda o carregamento completo antes de dar play
+        video.onloadedmetadata = () => {
+          video.play().catch((err) => {
+            status.textContent = "❌ Erro ao iniciar vídeo: " + err.message;
+          });
+        };
       } catch (err) {
-        document.getElementById("status").textContent = "❌ Erro ao acessar a câmera: " + err.message;
+        status.textContent = "❌ Erro ao acessar a câmera: " + err.message;
       }
     }
 
