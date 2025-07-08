@@ -29,11 +29,14 @@
 <body>
   <h1>Verificação Facial - IDPlus</h1>
 
-  <video id="video" width="360" height="270" autoplay muted></video>
+  <!-- CORRIGIDO: o elemento de vídeo para a câmera -->
+  <video id="video" width="360" height="270" autoplay muted playsinline></video>
   <br/>
+
   <button onclick="capturarReferencia()">📸 Capturar Referência</button>
   <button onclick="comparar()">🔍 Verificar Semelhança</button>
-  <br/>
+
+  <!-- Canvas escondido para referência facial -->
   <canvas id="canvasReferencia" width="360" height="270" style="display: none;"></canvas>
 
   <div id="status" class="status"></div>
