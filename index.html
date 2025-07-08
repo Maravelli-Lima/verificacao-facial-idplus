@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <title>IDPlus – Verificação Doc + Selfie</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 2em; }
-    #docImage { max-width: 300px; margin-top: 10px; }
-    #status { margin-top: 20px; font-weight: bold; }
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 30px; }
+    #docImage, #videoElement, #selfieCanvas { max-width: 300px; margin-top: 10px; }
+    #btnStart { margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -16,16 +16,87 @@
   <p>📄 Upload da foto do documento:
     <input type="file" id="docUpload" accept="image/*">
   </p>
+  <img id="docImage" alt="Documento" />
 
-  <img id="docImage" crossorigin="anonymous" alt="Documento">
-  <br>
+  <div>
+    <video id="videoElement" autoplay muted></video>
+    <canvas id="selfieCanvas" style="display:none;"></canvas>
+  </div>
 
-  <button id="btnStart" disabled>📷 Iniciar Selfie & Comparar</button>
+  <button id="btnStart">📸 Capturar Selfie & Comparar</button>
 
-  <div id="status">Status: aguardando upload do documento.</div>
+  <p id="status"><strong>Status:</strong> aguardando upload do documento.</p>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2"></script>
-  <script src="./script.js"></script>
+  <script>
+    const docUpload = document.getElementById('docUpload');
+    const docImage = document.getElementById('docImage');
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('selfieCanvas');
+    const btnStart = document.getElementById('btnStart');
+    const statusText = document.getElementById('status');
+
+    let docDescriptor = null;
+
+    async function loadModels() {
+      statusText.innerText = '🔄 Carregando modelos...';
+      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js/models';
+      await Promise.all([
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL)
+      ]);
+      statusText.innerText = '✅ Modelos carregados.';
+    }
+
+    async function startCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+    }
+
+    docUpload.addEventListener('change', async () => {
+      const file = docUpload.files[0];
+      if (!file) return;
+
+      const img = await faceapi.bufferToImage(file);
+      docImage.src = img.src;
+      statusText.innerText = '🔍 Analisando documento...';
+
+      const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+      if (!detection) {
+        statusText.innerText = '❌ Nenhum rosto detectado no documento.';
+        return;
+      }
+      docDescriptor = detection.descriptor;
+      statusText.innerText = '✅ Documento analisado. Abra a câmera e clique no botão para comparar.';
+    });
+
+    btnStart.addEventListener('click', async () => {
+      if (!docDescriptor) {
+        statusText.innerText = '⚠️ Envie o documento primeiro.';
+        return;
+      }
+      statusText.innerText = '📸 Capturando selfie...';
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+      if (!detection) {
+        statusText.innerText = '❌ Nenhum rosto detectado na selfie.';
+        return;
+      }
+
+      const distance = faceapi.euclideanDistance(docDescriptor, detection.descriptor);
+      const similarity = (1 - distance) * 100;
+
+      if (similarity > 60) {
+        statusText.innerText = `✅ Rosto compatível! Similaridade: ${similarity.toFixed(2)}%`;
+      } else {
+        statusText.innerText = `❌ Rosto diferente. Similaridade: ${similarity.toFixed(2)}%`;
+      }
+    });
+
+    loadModels().then(startCamera);
+  </script>
 </body>
 </html>
