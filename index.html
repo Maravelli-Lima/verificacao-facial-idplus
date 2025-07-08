@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <title>Verificação Facial - IDPlus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Lib face-api -->
   <script defer src="./face-api.min.js"></script>
 
   <style>
@@ -49,17 +51,22 @@
 <body>
   <h1>Verificação Facial - IDPlus</h1>
 
+  <!-- Vídeo da câmera -->
   <video id="video" width="360" height="270" autoplay muted playsinline></video>
 
+  <!-- Botões de ação -->
   <div>
     <button onclick="capturarReferencia()">📸 Capturar Referência</button>
     <button onclick="comparar()">🔍 Verificar Semelhança</button>
   </div>
 
+  <!-- Canvas para referência -->
   <canvas id="canvasReferencia" width="360" height="270" style="display: none;"></canvas>
 
+  <!-- Resultado -->
   <div id="status" class="status">⚠️ Por favor, capture uma referência primeiro.</div>
 
+  <!-- Script principal -->
   <script>
     let referenciaDescriptor = null;
 
@@ -88,7 +95,6 @@
 
         video.srcObject = stream;
 
-        // Aguarda o carregamento completo antes de dar play
         video.onloadedmetadata = () => {
           video.play().catch((err) => {
             status.textContent = "❌ Erro ao iniciar vídeo: " + err.message;
@@ -107,6 +113,8 @@
       canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
       canvas.style.display = "block";
 
+      await new Promise(resolve => setTimeout(resolve, 200)); // Pequeno delay
+
       const deteccao = await faceapi
         .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
         .withFaceLandmarks()
@@ -118,6 +126,7 @@
       }
 
       referenciaDescriptor = deteccao.descriptor;
+      console.log("🔐 Referência capturada:", referenciaDescriptor);
       status.textContent = "📌 Referência capturada com sucesso.";
     }
 
@@ -125,7 +134,7 @@
       const video = document.getElementById("video");
       const status = document.getElementById("status");
 
-      if (!referenciaDescriptor) {
+      if (!referenciaDescriptor || referenciaDescriptor.length === 0) {
         status.textContent = "⚠️ Por favor, capture uma referência primeiro.";
         return;
       }
@@ -141,14 +150,16 @@
       }
 
       const distancia = faceapi.euclideanDistance(referenciaDescriptor, deteccao.descriptor);
+      console.log("📏 Similaridade:", distancia);
 
       if (distancia < 0.6) {
-        status.innerHTML = `✅ Rosto compatível! Similaridade: ${distancia.toFixed(4)}`;
+        status.innerHTML = `✅ Rosto compatível! Similaridade: <strong>${distancia.toFixed(2)}</strong>`;
       } else {
-        status.innerHTML = `❌ Rosto diferente. Similaridade: ${distancia.toFixed(4)}`;
+        status.innerHTML = `❌ Rosto diferente. Similaridade: <strong>${distancia.toFixed(2)}</strong>`;
       }
     }
 
+    // Início automático ao carregar a página
     window.onload = async () => {
       await carregarModelos();
       await iniciarCamera();
