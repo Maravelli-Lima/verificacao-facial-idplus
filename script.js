@@ -1,68 +1,53 @@
-let referenceDescriptor = null;
+// Carregar e exibir a imagem do documento
+document.getElementById('docUpload').addEventListener('change', function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
 
-async function loadModels() {
-  await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
-  await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
-  await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
-}
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const img = document.getElementById('docImage');
+    img.src = e.target.result;
+    document.getElementById('status').textContent = "✅ Documento carregado. Agora capture a selfie.";
+  };
+  reader.readAsDataURL(file);
+});
 
-async function setupCamera() {
-  const video = document.getElementById('video');
+// Iniciar câmera e capturar selfie
+async function iniciarSelfie() {
+  const video = document.createElement('video');
+  video.autoplay = true;
+  video.width = 320;
+  video.height = 240;
+  document.body.appendChild(video);
+
   const stream = await navigator.mediaDevices.getUserMedia({ video: true });
   video.srcObject = stream;
-  return new Promise(r => video.onloadedmetadata = r);
+
+  const captureButton = document.createElement('button');
+  captureButton.textContent = '📸 Capturar Selfie';
+  document.body.appendChild(captureButton);
+
+  captureButton.onclick = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 240;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    document.body.appendChild(canvas);
+
+    stream.getTracks().forEach(track => track.stop());
+    video.remove();
+    captureButton.remove();
+
+    document.getElementById('status').textContent = "✅ Selfie capturada. Pronto para comparar.";
+  };
 }
 
-async function handleDocumentUpload() {
-  const input = document.getElementById('docInput');
-  const img = document.getElementById('docPreview');
-  
-  input.addEventListener('change', async () => {
-    const file = input.files[0];
-    if (!file) return;
-    img.src = URL.createObjectURL(file);
-    await img.decode();
-    
-    const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-                           .withFaceLandmarks().withFaceDescriptor();
-    document.getElementById('status').textContent = det
-      ? '✅ Documento processado com sucesso.'
-      : '❌ Não detectou rosto no documento.';
-    referenceDescriptor = det?.descriptor || null;
-  });
-}
-
-async function captureAndCompare() {
-  const canvas = document.getElementById('canvas');
-  const video = document.getElementById('video');
-  const status = document.getElementById('status');
-  
-  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-  const det = await faceapi.detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
-                       .withFaceLandmarks().withFaceDescriptor();
-  if (!det) {
-    status.textContent = '❌ Não detectou rosto na selfie.';
+// Botão de iniciar selfie
+document.getElementById('btnStart').addEventListener('click', () => {
+  const docImg = document.getElementById('docImage').src;
+  if (!docImg || docImg.includes("undefined")) {
+    document.getElementById('status').textContent = "⚠️ Por favor, carregue o documento antes.";
     return;
   }
-  if (!referenceDescriptor) {
-    status.textContent = '⚠️ Envie a foto do documento antes.';
-    return;
-  }
-  
-  const dist = faceapi.euclideanDistance(referenceDescriptor, det.descriptor);
-  status.textContent = dist < 0.6
-    ? `✅ Mesma pessoa! Similaridade: ${dist.toFixed(3)}`
-    : `❌ Pessoa diferente. Similaridade: ${dist.toFixed(3)}`;
-}
-
-window.onload = async () => {
-  await loadModels();
-  await handleDocumentUpload();
-  await setupCamera();
-
-  document.getElementById('startBtn')
-    .addEventListener('click', captureAndCompare);
-
-  document.getElementById('status')
-    .textContent = 'Tudo pronto 🎯 Faça o upload e inicie a selfie.';
-};
+  iniciarSelfie();
+});
