@@ -1,22 +1,122 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Verificação Facial - IDPlus</title>
-  <link rel="stylesheet" href="style.css" />
-
-  <!-- Scripts essenciais -->
-  <script defer src="./face-api.min.js"></script>
-  <script defer src="./script.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    video, canvas, img {
+      border-radius: 12px;
+      margin-bottom: 20px;
+      max-width: 100%;
+    }
+    .status {
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <img src="favicon.ico" alt="Logo" width="100" style="margin-bottom: 20px;" />
-    <h1>Verificação Facial - IDPlus</h1>
-    <p>Pressione o botão abaixo para iniciar a verificação.</p>
-    <button id="startButton">Iniciar Verificação</button>
-    <p id="status">📦 Carregando modelos...</p>
-  </div>
+  <img src="logo.png" alt="Logo" width="100"/>
+  <h1>Verificação Facial - IDPlus</h1>
+  <p>Pressione o botão abaixo para iniciar a verificação.</p>
+  <button onclick="iniciarVerificacao()">Iniciar Verificação</button>
+  <p class="status" id="status"></p>
+  <video id="video" width="360" height="270" autoplay muted></video>
+  <img id="imagemReferencia" src="foto.png" width="360" height="270" />
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <script>
+    async function iniciarVerificacao() {
+      const status = document.getElementById('status');
+      status.textContent = "⏳ Carregando modelos...";
+
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models')
+        ]);
+      } catch (e) {
+        status.innerHTML = "❌ Erro ao carregar modelos: " + e.message;
+        return;
+      }
+
+      status.textContent = "📷 Acessando a câmera...";
+
+      const video = document.getElementById('video');
+      navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => {
+          video.srcObject = stream;
+          status.textContent = "✅ Câmera iniciada com sucesso.";
+        })
+        .catch(err => {
+          status.innerHTML = "❌ Erro ao acessar a câmera: " + err.message;
+        });
+
+      video.onloadedmetadata = async () => {
+        await compararRostos();
+      };
+    }
+
+    async function compararRostos() {
+      const status = document.getElementById('status');
+      const video = document.getElementById('video');
+      const imagem = document.getElementById('imagemReferencia');
+
+      try {
+        const deteccaoReferencia = await faceapi
+          .detectSingleFace(imagem, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+
+        if (!deteccaoReferencia) {
+          status.innerHTML = "❌ Nenhum rosto encontrado na imagem de referência.";
+          return;
+        }
+
+        const deteccaoCamera = await faceapi
+          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+
+        if (!deteccaoCamera) {
+          status.innerHTML = "❌ Nenhum rosto detectado na câmera.";
+          return;
+        }
+
+        const distancia = faceapi.euclideanDistance(
+          deteccaoReferencia.descriptor,
+          deteccaoCamera.descriptor
+        );
+
+        if (distancia < 0.6) {
+          status.innerHTML = "✅ Rosto compatível! Similaridade: " + distancia.toFixed(2);
+        } else {
+          status.innerHTML = "❌ Rosto não compatível. Similaridade: " + distancia.toFixed(2);
+        }
+      } catch (erro) {
+        status.innerHTML = "❌ Erro na verificação: " + erro.message;
+      }
+    }
+  </script>
 </body>
 </html>
+
