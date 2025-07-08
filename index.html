@@ -4,24 +4,20 @@
   <meta charset="UTF-8" />
   <title>Verificação Facial - IDPlus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="./style.css" /> <!-- opcional -->
-
-  <!-- bibliotecas -->
-  <script defer src="./face-api.min.js"></script>
-  <script defer src="./script.js"></script>
 </head>
 <body>
   <h1>Verificação Facial - IDPlus</h1>
 
   <video id="video" width="360" height="270" autoplay muted playsinline></video>
-
-  <div>
-    <button onclick="capturarReferencia()">📸 Capturar Referência</button>
-    <button onclick="comparar()">🔍 Verificar Semelhança</button>
-  </div>
-
+  <br />
+  <button onclick="capturarReferencia()">📸 Capturar Referência</button>
+  <button onclick="comparar()">🔍 Verificar Semelhança</button>
+  <br />
   <canvas id="canvasReferencia" width="360" height="270" style="display:none;"></canvas>
+  <div id="status">⚠️ Por favor, capture uma referência primeiro.</div>
 
-  <div id="status" class="status">⚠️ Por favor, capture uma referência primeiro.</div>
+  <!-- Scripts -->
+  <script defer src="./face-api.min.js"></script>
+  <script defer src="./script.js"></script>
 </body>
 </html>
