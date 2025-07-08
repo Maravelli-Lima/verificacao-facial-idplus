@@ -22,6 +22,9 @@
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       margin: 10px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     button {
@@ -84,6 +87,7 @@
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
         await video.play();
+        console.log("🎥 Câmera iniciada com sucesso.");
       } catch (err) {
         document.getElementById("status").textContent = "❌ Erro ao acessar a câmera: " + err.message;
       }
