@@ -1,46 +1,31 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>IDPlus – Verificação Doc + Selfie</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 40px;
-    }
-    #docImage {
-      max-width: 300px;
-      max-height: 300px;
-      display: block;
-      margin: 10px auto;
-      border: 1px solid #ccc;
-    }
-    #status {
-      margin-top: 20px;
-      font-weight: bold;
-    }
-    video, canvas {
-      margin-top: 10px;
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
+    body { font-family: Arial, sans-serif; text-align: center; padding: 2em; }
+    #docImage { max-width: 300px; margin-top: 10px; }
+    #status { margin-top: 20px; font-weight: bold; }
   </style>
 </head>
 <body>
   <h1>IDPlus – Verificação Doc + Selfie</h1>
 
-  <label for="docUpload">📄 Upload da foto do documento:</label>
-  <input type="file" id="docUpload" accept="image/*" /><br />
+  <p>📄 Upload da foto do documento:
+    <input type="file" id="docUpload" accept="image/*">
+  </p>
 
-  <img id="docImage" alt="Documento" />
+  <img id="docImage" crossorigin="anonymous" alt="Documento">
+  <br>
 
-  <button id="btnStart">📷 Iniciar Selfie & Comparar</button>
+  <button id="btnStart" disabled>📷 Iniciar Selfie & Comparar</button>
 
   <div id="status">Status: aguardando upload do documento.</div>
 
-  <script src="script.js"></script>
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2"></script>
+  <script src="./script.js"></script>
 </body>
 </html>
