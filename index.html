@@ -2,32 +2,30 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Verificação Facial - IDPlus</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="./style.css" />
-
-  <!-- face-api.js correta para navegador (CDN oficial) -->
+  <title>IDPlus – Doc + Selfie</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-
-  <!-- Seu script com a lógica -->
   <script defer src="./script.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align:center; padding:20px; }
+    video, img, canvas { max-width:300px; margin:10px auto; display:block; border:1px solid #ccc; border-radius:8px; }
+    button { padding:10px 20px; margin:10px; }
+    #status { font-weight:bold; margin-top:15px; }
+  </style>
 </head>
 <body>
-  <h1>Verificação Facial - IDPlus</h1>
+  <h1>IDPlus – Verificação Doc + Selfie</h1>
 
-  <!-- VÍDEO -->
-  <video id="video" width="360" height="270" autoplay muted playsinline></video>
+  <label>
+    📄 Upload da foto do documento:
+    <input type="file" id="docInput" accept="image/*" />
+  </label>
+  <img id="docPreview" alt="Documento" />
 
-  <!-- BOTÕES -->
-  <div>
-    <button onclick="capturarReferencia()">📸 Capturar Referência</button>
-    <button onclick="comparar()">🔍 Verificar Semelhança</button>
-  </div>
+  <video id="video" autoplay muted playsinline width="300" height="225"></video>
+  <button id="startBtn">Iniciar Selfie & Comparar</button>
+  <canvas id="canvas" width="300" height="225" style="display:none;"></canvas>
 
-  <!-- CANVAS -->
-  <canvas id="canvasReferencia" width="360" height="270" style="display: none;"></canvas>
-
-  <!-- STATUS -->
-  <div id="status" class="status">⚠️ Por favor, capture uma referência primeiro.</div>
+  <div id="status">Status: aguardando upload do documento.</div>
 </body>
 </html>
