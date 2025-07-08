@@ -1,112 +1,80 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>IDPlus – Verificação Doc + Selfie</title>
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 2em;
-    }
-    video, canvas, img {
-      margin-top: 1em;
-      max-width: 320px;
-      height: auto;
-    }
-    #status {
-      margin-top: 1em;
-      font-weight: bold;
-    }
+    body { text-align: center; font-family: Arial, sans-serif; }
+    video { width: 300px; margin-top: 10px; border-radius: 8px; }
+    canvas { position: absolute; }
   </style>
 </head>
 <body>
   <h1>IDPlus – Verificação Doc + Selfie</h1>
 
-  <!-- Upload do Documento -->
-  <label for="docUpload">📄 Upload da foto do documento:</label>
-  <input type="file" id="docUpload" accept="image/*" /><br />
-  <img id="docImage" alt="Documento" />
+  <label>📄 Upload da foto do documento:
+    <input type="file" id="docUpload" accept="image/*">
+  </label><br><br>
+  
+  <img id="docImage" width="250" alt="Documento"><br><br>
 
-  <!-- Câmera -->
-  <div>
-    <video id="videoElement" autoplay muted></video><br />
-    <button id="btnStart">📷 Capturar Selfie & Comparar</button>
-  </div>
+  <video id="video" autoplay muted></video><br><br>
 
-  <div id="status">⌛ Carregando modelos...</div>
+  <button id="btnStart">📸 Capturar Selfie & Comparar</button>
+
+  <p id="status">⏳ Carregando modelos...</p>
 
   <script>
-    const docUpload = document.getElementById('docUpload');
+    const video = document.getElementById('video');
     const docImage = document.getElementById('docImage');
-    const video = document.getElementById('videoElement');
-    const btnStart = document.getElementById('btnStart');
-    const statusDiv = document.getElementById('status');
+    const docUpload = document.getElementById('docUpload');
+    const status = document.getElementById('status');
 
-    let docDescriptor = null;
-
-    async function loadModels() {
-      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js/models';
-      await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-      statusDiv.textContent = '✅ Modelos carregados. Pronto!';
-    }
-
-    async function startCamera() {
+    async function initCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
-        statusDiv.textContent = '🎥 Câmera ativada.';
-      } catch (err) {
-        console.error('Erro ao acessar a câmera:', err);
-        statusDiv.textContent = '❌ Não foi possível acessar a câmera.';
+      } catch (e) {
+        status.textContent = 'Erro ao acessar a câmera';
       }
+    }
+
+    async function loadModels() {
+      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+      ]);
+      status.textContent = '✅ Modelos carregados. Pronto para uso.';
     }
 
     docUpload.addEventListener('change', async () => {
       const file = docUpload.files[0];
       if (!file) return;
-
-      const img = await faceapi.bufferToImage(file);
-      docImage.src = img.src;
-      statusDiv.textContent = '🧠 Analisando documento...';
-
-      const detections = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
-      if (!detections) {
-        statusDiv.textContent = '❌ Nenhum rosto detectado no documento.';
-        return;
-      }
-
-      docDescriptor = detections.descriptor;
-      statusDiv.textContent = '✅ Documento analisado. Pronto para selfie.';
+      docImage.src = URL.createObjectURL(file);
+      await new Promise(resolve => docImage.onload = resolve);
+      status.textContent = '🧠 Documento carregado. Clique em Capturar Selfie.';
     });
 
-    btnStart.addEventListener('click', async () => {
-      if (!docDescriptor) {
-        statusDiv.textContent = '⚠️ Envie o documento primeiro.';
+    document.getElementById('btnStart').addEventListener('click', async () => {
+      status.textContent = '🧪 Analisando...';
+      const docDetection = await faceapi.detectSingleFace(docImage).withFaceLandmarks().withFaceDescriptor();
+      const selfie = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+      if (!docDetection || !selfie) {
+        status.textContent = '❌ Rostos não detectados em ambas as imagens.';
         return;
       }
-
-      const capture = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-      if (!capture) {
-        statusDiv.textContent = '❌ Nenhum rosto detectado na selfie.';
-        return;
-      }
-
-      const distance = faceapi.euclideanDistance(docDescriptor, capture.descriptor);
+      const distance = faceapi.euclideanDistance(docDetection.descriptor, selfie.descriptor);
       const match = distance < 0.6;
-      statusDiv.textContent = match
-        ? `✅ Verificação concluída. Similaridade alta (distância: ${distance.toFixed(4)})`
-        : `❌ Rosto não compatível (distância: ${distance.toFixed(4)})`;
+      status.textContent = match
+        ? `✅ Mesma pessoa (distância: ${distance.toFixed(4)})`
+        : `❌ Pessoas diferentes (distância: ${distance.toFixed(4)})`;
     });
 
-    // Início
-    window.addEventListener('DOMContentLoaded', async () => {
-      await loadModels();
-      await startCamera();
-    });
+    initCamera();
+    loadModels();
   </script>
 </body>
 </html>
