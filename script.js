@@ -61,3 +61,26 @@ async function comparar() {
   }
 
   const deteccao = await faceapi
+    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+    .withFaceLandmarks()
+    .withFaceDescriptor();
+
+  if (!deteccao) {
+    status.textContent = "❌ Nenhum rosto detectado ao vivo.";
+    return;
+  }
+
+  const distancia = faceapi.euclideanDistance(referenciaDescriptor, deteccao.descriptor);
+  console.log("📏 Similaridade:", distancia);
+
+  if (distancia < 0.6) {
+    status.innerHTML = `✅ Rosto compatível! Similaridade: <strong>${distancia.toFixed(4)}</strong>`;
+  } else {
+    status.innerHTML = `❌ Rosto diferente. Similaridade: <strong>${distancia.toFixed(4)}</strong>`;
+  }
+}
+
+window.onload = async () => {
+  await carregarModelos();
+  await iniciarCamera();
+};
