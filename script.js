@@ -1,53 +1,89 @@
-// Carregar e exibir a imagem do documento
-document.getElementById('docUpload').addEventListener('change', function (event) {
-  const file = event.target.files[0];
-  if (!file) return;
+let docDescriptor = null;
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const img = document.getElementById('docImage');
-    img.src = e.target.result;
-    document.getElementById('status').textContent = "✅ Documento carregado. Agora capture a selfie.";
-  };
-  reader.readAsDataURL(file);
-});
-
-// Iniciar câmera e capturar selfie
-async function iniciarSelfie() {
-  const video = document.createElement('video');
-  video.autoplay = true;
-  video.width = 320;
-  video.height = 240;
-  document.body.appendChild(video);
-
-  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-  video.srcObject = stream;
-
-  const captureButton = document.createElement('button');
-  captureButton.textContent = '📸 Capturar Selfie';
-  document.body.appendChild(captureButton);
-
-  captureButton.onclick = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 240;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    document.body.appendChild(canvas);
-
-    stream.getTracks().forEach(track => track.stop());
-    video.remove();
-    captureButton.remove();
-
-    document.getElementById('status').textContent = "✅ Selfie capturada. Pronto para comparar.";
-  };
+// Carrega os modelos da face-api
+async function carregarModelos() {
+  const MODEL_URL = './models';
+  await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+  document.getElementById('status').innerText = 'Modelos carregados. Faça upload do documento.';
 }
 
-// Botão de iniciar selfie
-document.getElementById('btnStart').addEventListener('click', () => {
-  const docImg = document.getElementById('docImage').src;
-  if (!docImg || docImg.includes("undefined")) {
-    document.getElementById('status').textContent = "⚠️ Por favor, carregue o documento antes.";
-    return;
-  }
-  iniciarSelfie();
+document.addEventListener('DOMContentLoaded', () => {
+  carregarModelos();
+
+  const input = document.getElementById('docUpload');
+  const img = document.getElementById('docImage');
+  const status = document.getElementById('status');
+
+  input.addEventListener('change', async () => {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      img.src = reader.result;
+      status.innerText = 'Analisando documento...';
+      await new Promise(r => setTimeout(r, 500)); // espera imagem carregar
+
+      const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+      if (!detection) {
+        status.innerText = 'Rosto não detectado no documento.';
+        return;
+      }
+
+      docDescriptor = detection.descriptor;
+      status.innerText = 'Documento analisado. Clique para capturar a selfie.';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const btn = document.getElementById('btnStart');
+  btn.addEventListener('click', async () => {
+    if (!docDescriptor) {
+      status.innerText = '⚠️ Por favor, envie primeiro o documento.';
+      return;
+    }
+
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.width = 320;
+    video.height = 240;
+    document.body.appendChild(video);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+
+      status.innerText = 'Capturando selfie em 3 segundos...';
+      await new Promise(r => setTimeout(r, 3000));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 240;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      stream.getTracks().forEach(t => t.stop());
+      video.remove();
+
+      const result = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+
+      if (!result) {
+        status.innerText = 'Nenhum rosto detectado na selfie.';
+        return;
+      }
+
+      const distance = faceapi.euclideanDistance(docDescriptor, result.descriptor);
+      if (distance < 0.6) {
+        status.innerText = '✅ A selfie é compatível com o documento.';
+      } else {
+        status.innerText = '❌ Rosto da selfie diferente do documento.';
+      }
+
+    } catch (err) {
+      status.innerText = 'Erro ao acessar câmera.';
+      console.error(err);
+    }
+  });
 });
