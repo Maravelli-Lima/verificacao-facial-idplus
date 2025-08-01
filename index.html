@@ -38,8 +38,8 @@
             margin: 20px auto;
             border: 1px solid #ddd;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba
-            }
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
 
         video {
             width: 320px; /* Largura padrão para a câmera */
@@ -164,8 +164,8 @@
 
         // Carrega os modelos do face-api.js
         async function loadModels() {
-            // CORREÇÃO AQUI: Mudança da URL dos modelos
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights'; 
+            // CORREÇÃO CRUCIAL AQUI: Mudança da URL dos modelos para 'dist/models'
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/models'; 
             updateStatus('⏳ Carregando modelos de IA...', 'loading');
             try {
                 await Promise.all([
