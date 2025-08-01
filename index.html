@@ -1,107 +1,287 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>IDPlus – Verificação Doc + Selfie</title>
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" onload="onFaceApiLoaded()"></script>
-  <style>
-    body { text-align: center; font-family: Arial, sans-serif; }
-    video { width: 300px; margin-top: 10px; border-radius: 8px; }
-    canvas { position: absolute; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDPlus – Verificação Doc + Selfie</title>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" onload="onFaceApiLoaded()"></script>
+
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        h1 {
+            color: #0056b3;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        input[type="file"] {
+            margin-top: 5px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        img, video {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        video {
+            width: 320px; /* Largura padrão para a câmera */
+            height: 240px; /* Altura padrão para a câmera */
+            background-color: #000; /* Fundo preto enquanto a câmera não carrega */
+        }
+
+        /* Container para sobrepor o canvas no vídeo */
+        .video-container {
+            position: relative;
+            width: 320px; /* Mesma largura do vídeo */
+            height: 240px; /* Mesma altura do vídeo */
+            margin: 20px auto;
+        }
+
+        .video-container video,
+        .video-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none; /* Remover borda duplicada */
+            box-shadow: none; /* Remover sombra duplicada */
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+
+        p#status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: bold;
+        }
+
+        /* Estilos para diferentes estados de status */
+        p#status.loading { background-color: #e0f7fa; color: #007bff; }
+        p#status.success { background-color: #e6ffe6; color: #28a745; }
+        p#status.error { background-color: #ffe6e6; color: #dc3545; }
+        p#status.warning { background-color: #fff3cd; color: #ffc107; }
+
+    </style>
 </head>
 <body>
-  <h1>IDPlus – Verificação Doc + Selfie</h1>
+    <h1>IDPlus – Verificação Doc + Selfie</h1>
 
-  <label>📄 Upload da foto do documento:
-    <input type="file" id="docUpload" accept="image/*">
-  </label><br><br>
-  
-  <img id="docImage" width="250" alt="Documento"><br><br>
+    <label>📄 Upload da foto do documento:
+        <input type="file" id="docUpload" accept="image/*">
+    </label>
+    
+    <img id="docImage" width="320" alt="Documento Carregado" style="display: none;"> <div class="video-container">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlayCanvas"></canvas> </div>
 
-  <video id="video" autoplay muted playsinline></video><br><br>
+    <button id="btnStart" disabled>📸 Capturar Selfie & Comparar</button>
 
-  <button id="btnStart" disabled>📸 Capturar Selfie & Comparar</button>
+    <p id="status" class="loading">⏳ Carregando modelos...</p>
 
-  <p id="status">⏳ Carregando modelos...</p>
+    <script>
+        // Elementos do DOM
+        const video = document.getElementById('video');
+        const docImage = document.getElementById('docImage');
+        const docUpload = document.getElementById('docUpload');
+        const statusElement = document.getElementById('status'); // Renomeado para evitar conflito com "status" do HTML
+        const btnStart = document.getElementById('btnStart');
+        const overlayCanvas = document.getElementById('overlayCanvas'); // Referência ao canvas
+        const videoContainer = document.querySelector('.video-container'); // Referência ao container do vídeo
 
-  <script>
-    let modelsLoaded = false;
+        let modelsLoaded = false;
+        let context = overlayCanvas.getContext('2d');
 
-    const video = document.getElementById('video');
-    const docImage = document.getElementById('docImage');
-    const docUpload = document.getElementById('docUpload');
-    const status = document.getElementById('status');
-    const btnStart = document.getElementById('btnStart');
+        // Função para atualizar o status na interface
+        function updateStatus(message, type = 'default') {
+            statusElement.textContent = message;
+            statusElement.className = ''; // Limpa classes existentes
+            statusElement.classList.add(type); // Adiciona a nova classe de tipo
+        }
 
-    async function initCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-      } catch (e) {
-        status.textContent = '❌ Erro ao acessar a câmera';
-      }
-    }
+        // Inicializa a câmera
+        async function initCamera() {
+            updateStatus('▶️ Iniciando câmera...', 'loading');
+            try {
+                // Obtém as dimensões do vídeo para configurar o canvas
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 320 }, height: { ideal: 240 } } });
+                video.srcObject = stream;
 
-    async function loadModels() {
-      const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
-      try {
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
-        ]);
-        modelsLoaded = true;
-        btnStart.disabled = false;
-        status.textContent = '✅ Modelos carregados. Pronto para uso.';
-      } catch (err) {
-        status.textContent = '❌ Erro ao carregar modelos';
-        console.error(err);
-      }
-    }
+                // Espera o vídeo carregar para pegar as dimensões reais
+                await new Promise(resolve => video.onloadedmetadata = resolve);
 
-    function onFaceApiLoaded() {
-      initCamera();
-      loadModels();
-    }
+                // Define as dimensões do container e do canvas para corresponder ao vídeo
+                videoContainer.style.width = `${video.videoWidth}px`;
+                videoContainer.style.height = `${video.videoHeight}px`;
+                overlayCanvas.width = video.videoWidth;
+                overlayCanvas.height = video.videoHeight;
+                
+                updateStatus('✅ Câmera iniciada.', 'success');
+            } catch (e) {
+                updateStatus('❌ Erro ao acessar a câmera. Verifique as permissões.', 'error');
+                console.error('Erro ao acessar a câmera:', e);
+            }
+        }
 
-    docUpload.addEventListener('change', async () => {
-      const file = docUpload.files[0];
-      if (!file) return;
-      docImage.src = URL.createObjectURL(file);
-      await new Promise(resolve => docImage.onload = resolve);
-      status.textContent = '📎 Documento carregado. Clique em Capturar Selfie.';
-    });
+        // Carrega os modelos do face-api.js
+        async function loadModels() {
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
+            updateStatus('⏳ Carregando modelos de IA...', 'loading');
+            try {
+                await Promise.all([
+                    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+                    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+                ]);
+                modelsLoaded = true;
+                btnStart.disabled = false;
+                updateStatus('✅ Modelos carregados. Pronto para uso.', 'success');
+            } catch (err) {
+                updateStatus('❌ Erro ao carregar modelos. Verifique sua conexão ou console.', 'error');
+                console.error('Erro ao carregar modelos do face-api.js:', err);
+            }
+        }
 
-    btnStart.addEventListener('click', async () => {
-      if (!modelsLoaded) {
-        status.textContent = '⚠️ Aguarde os modelos carregarem...';
-        return;
-      }
+        // Função chamada quando a biblioteca face-api.js é carregada
+        function onFaceApiLoaded() {
+            initCamera();
+            loadModels();
+        }
 
-      status.textContent = '🧪 Analisando...';
+        // Event listener para o upload do documento
+        docUpload.addEventListener('change', async () => {
+            const file = docUpload.files[0];
+            if (!file) {
+                docImage.style.display = 'none'; // Oculta a imagem se nenhum arquivo for selecionado
+                updateStatus('Selecione um arquivo de documento.', 'default');
+                return;
+            }
+            updateStatus('📎 Carregando documento...', 'loading');
+            docImage.src = URL.createObjectURL(file);
+            docImage.style.display = 'block'; // Mostra a imagem
+            await new Promise(resolve => docImage.onload = resolve); // Espera a imagem carregar
+            updateStatus('📎 Documento carregado. Clique em Capturar Selfie & Comparar.', 'success');
+        });
 
-      const docDetection = await faceapi
-        .detectSingleFace(docImage, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+        // Event listener para o botão de iniciar comparação
+        btnStart.addEventListener('click', async () => {
+            if (!modelsLoaded) {
+                updateStatus('⚠️ Aguarde os modelos carregarem antes de continuar...', 'warning');
+                return;
+            }
+            if (!docImage.src || docImage.style.display === 'none') {
+                updateStatus('⚠️ Por favor, carregue uma foto do documento primeiro.', 'warning');
+                return;
+            }
 
-      const selfie = await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+            updateStatus('🧪 Analisando rostos...', 'loading');
 
-      if (!docDetection || !selfie) {
-        status.textContent = '❌ Rosto não detectado em uma das imagens.';
-        return;
-      }
+            // Detecção no documento
+            const docDetection = await faceapi
+                .detectSingleFace(docImage, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
 
-      const distance = faceapi.euclideanDistance(docDetection.descriptor, selfie.descriptor);
-      const match = distance < 0.6;
-      status.textContent = match
-        ? `✅ Mesma pessoa (distância: ${distance.toFixed(4)})`
-        : `❌ Pessoas diferentes (distância: ${distance.toFixed(4)})`;
-    });
-  </script>
+            // Detecção na selfie (vídeo)
+            const selfieDetection = await faceapi
+                .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+
+            // Limpa o canvas antes de desenhar
+            context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            if (!docDetection) {
+                updateStatus('❌ Rosto não detectado na imagem do documento.', 'error');
+                console.warn('Rosto não detectado no documento.');
+                return;
+            }
+            if (!selfieDetection) {
+                updateStatus('❌ Rosto não detectado na selfie da câmera.', 'error');
+                console.warn('Rosto não detectado na selfie.');
+                return;
+            }
+
+            // Desenha as detecções na selfie (para feedback visual)
+            const displaySize = { width: video.videoWidth, height: video.videoHeight };
+            const resizedSelfieDetections = faceapi.resizeResults(selfieDetection, displaySize);
+            faceapi.draw.drawDetections(overlayCanvas, resizedSelfieDetections);
+            faceapi.draw.drawFaceLandmarks(overlayCanvas, resizedSelfieDetections);
+
+
+            // Calcula a distância euclidiana para comparação
+            const distance = faceapi.euclideanDistance(docDetection.descriptor, selfieDetection.descriptor);
+            const matchThreshold = 0.6; // Valor comum para comparação (menor é mais similar)
+            const match = distance < matchThreshold;
+
+            if (match) {
+                updateStatus(`✅ Mesma pessoa (distância: ${distance.toFixed(4)})`, 'success');
+            } else {
+                updateStatus(`❌ Pessoas diferentes (distância: ${distance.toFixed(4)})`, 'error');
+            }
+        });
+        
+        // Adiciona um listener para o evento 'play' do vídeo para desenhar detecções em tempo real
+        video.addEventListener('play', () => {
+            const displaySize = { width: video.videoWidth, height: video.videoHeight };
+            
+            // Loop para detectar e desenhar rostos em tempo real no vídeo
+            setInterval(async () => {
+                if (!modelsLoaded) return; // Não tenta detectar se os modelos não carregaram
+
+                const detections = await faceapi
+                    .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks();
+
+                context.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Limpa o canvas
+
+                if (detections) {
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    faceapi.draw.drawDetections(overlayCanvas, resizedDetections);
+                    faceapi.draw.drawFaceLandmarks(overlayCanvas, resizedDetections);
+                }
+            }, 100); // Roda a cada 100ms
+        });
+
+    </script>
 </body>
 </html>
