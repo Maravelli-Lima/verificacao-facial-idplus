@@ -164,8 +164,8 @@
 
         // Carrega os modelos do face-api.js
         async function loadModels() {
-            // CORREÇÃO CRUCIAL AQUI: Mudança da URL dos modelos para 'dist/models'
-            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/models'; 
+            // CORREÇÃO CRUCIAL AQUI: Tentativa com 'dist/model' (singular)
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/model'; 
             updateStatus('⏳ Carregando modelos de IA...', 'loading');
             try {
                 await Promise.all([
