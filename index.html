@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>IDPlus – Verificação Doc + Selfie</title>
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" onload="onFaceApiLoaded()"></script>
   <style>
     body { text-align: center; font-family: Arial, sans-serif; }
     video { width: 300px; margin-top: 10px; border-radius: 8px; }
@@ -19,35 +19,50 @@
   
   <img id="docImage" width="250" alt="Documento"><br><br>
 
-  <video id="video" autoplay muted></video><br><br>
+  <video id="video" autoplay muted playsinline></video><br><br>
 
-  <button id="btnStart">📸 Capturar Selfie & Comparar</button>
+  <button id="btnStart" disabled>📸 Capturar Selfie & Comparar</button>
 
   <p id="status">⏳ Carregando modelos...</p>
 
   <script>
+    let modelsLoaded = false;
+
     const video = document.getElementById('video');
     const docImage = document.getElementById('docImage');
     const docUpload = document.getElementById('docUpload');
     const status = document.getElementById('status');
+    const btnStart = document.getElementById('btnStart');
 
     async function initCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
       } catch (e) {
-        status.textContent = 'Erro ao acessar a câmera';
+        status.textContent = '❌ Erro ao acessar a câmera';
       }
     }
 
     async function loadModels() {
       const MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/models';
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
-      ]);
-      status.textContent = '✅ Modelos carregados. Pronto para uso.';
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+        ]);
+        modelsLoaded = true;
+        btnStart.disabled = false;
+        status.textContent = '✅ Modelos carregados. Pronto para uso.';
+      } catch (err) {
+        status.textContent = '❌ Erro ao carregar modelos';
+        console.error(err);
+      }
+    }
+
+    function onFaceApiLoaded() {
+      initCamera();
+      loadModels();
     }
 
     docUpload.addEventListener('change', async () => {
@@ -55,26 +70,38 @@
       if (!file) return;
       docImage.src = URL.createObjectURL(file);
       await new Promise(resolve => docImage.onload = resolve);
-      status.textContent = '🧠 Documento carregado. Clique em Capturar Selfie.';
+      status.textContent = '📎 Documento carregado. Clique em Capturar Selfie.';
     });
 
-    document.getElementById('btnStart').addEventListener('click', async () => {
-      status.textContent = '🧪 Analisando...';
-      const docDetection = await faceapi.detectSingleFace(docImage).withFaceLandmarks().withFaceDescriptor();
-      const selfie = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-      if (!docDetection || !selfie) {
-        status.textContent = '❌ Rostos não detectados em ambas as imagens.';
+    btnStart.addEventListener('click', async () => {
+      if (!modelsLoaded) {
+        status.textContent = '⚠️ Aguarde os modelos carregarem...';
         return;
       }
+
+      status.textContent = '🧪 Analisando...';
+
+      const docDetection = await faceapi
+        .detectSingleFace(docImage, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      const selfie = await faceapi
+        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!docDetection || !selfie) {
+        status.textContent = '❌ Rosto não detectado em uma das imagens.';
+        return;
+      }
+
       const distance = faceapi.euclideanDistance(docDetection.descriptor, selfie.descriptor);
       const match = distance < 0.6;
       status.textContent = match
         ? `✅ Mesma pessoa (distância: ${distance.toFixed(4)})`
         : `❌ Pessoas diferentes (distância: ${distance.toFixed(4)})`;
     });
-
-    initCamera();
-    loadModels();
   </script>
 </body>
 </html>
